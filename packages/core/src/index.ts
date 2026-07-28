@@ -16,5 +16,6 @@ export {
   type Profile,
   parseExitNodes,
   parseProfiles,
+  shortTailnetName,
   type TailscaleStatus,
 } from "./status.js";
