@@ -1,0 +1,8 @@
+node_modules/
+# build output
+packages/*/dist/
+packages/plugin/**/bin/
+# Stream Deck plugin runtime logs
+packages/plugin/**/logs/
+*.streamDeckPlugin
+.DS_Store
