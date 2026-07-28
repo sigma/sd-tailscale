@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copy IP — single state (#7).
+  Gray900 tile, signature Red400 (#D04841) glyph: two overlapping rounded
+  squares (copy). The front square is filled with the tile colour so it reads
+  as sitting *over* the back one. Biased down 8px for the title band.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" width="72" height="72">
+  <rect width="72" height="72" fill="#1F1E1E"/>
+  <g transform="translate(0 8)" fill="none" stroke="#D04841" stroke-width="5" stroke-linejoin="round">
+    <rect x="28" y="16" width="28" height="28" rx="6"/>
+    <rect x="16" y="28" width="28" height="28" rx="6" fill="#1F1E1E"/>
+  </g>
+</svg>

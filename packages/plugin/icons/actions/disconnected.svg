@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Connect — muted state (`disconnected`).
+  Tile-flip (#7): dark muted tile (#242327) + grey glyph (#6B6A6A) — reads
+  as "off" at a glance. Power glyph, biased down 8px for the title band.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" width="72" height="72">
+  <rect width="72" height="72" fill="#242327"/>
+  <g transform="translate(0 8)" fill="none" stroke="#6B6A6A" stroke-width="6" stroke-linecap="round">
+    <path d="M25 27 a17 17 0 1 0 22 0"/>
+    <line x1="36" y1="18" x2="36" y2="38"/>
+  </g>
+</svg>

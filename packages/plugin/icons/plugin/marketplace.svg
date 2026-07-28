@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Plugin / marketplace identity (#7): the original three-node "mesh" mark —
+  a triangle of linked nodes — white strokes + red nodes on a Gray900 tile.
+  No title band (identity icon, not an action key), so no downward bias.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" width="72" height="72">
+  <rect width="72" height="72" fill="#1F1E1E"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round">
+    <line x1="24" y1="46" x2="36" y2="24"/>
+    <line x1="36" y1="24" x2="48" y2="46"/>
+    <line x1="24" y1="46" x2="48" y2="46"/>
+  </g>
+  <circle cx="36" cy="24" r="7" fill="#D04841"/>
+  <circle cx="24" cy="46" r="7" fill="#D04841"/>
+  <circle cx="48" cy="46" r="7" fill="#D04841"/>
+</svg>
