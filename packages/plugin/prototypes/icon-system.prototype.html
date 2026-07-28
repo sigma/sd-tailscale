@@ -1,0 +1,283 @@
+<!doctype html>
+<!--
+  PROTOTYPE — throwaway. Answers wayfinder ticket #7:
+  "Decide the icon visual system (style, palette, state semantics)."
+
+  Three radically different icon *systems*, switchable via ?variant= (or ← / →).
+  Each renders every v1 action across its states on a Stream-Deck-like dark key,
+  plus the mono-white category icon and the color plugin/marketplace mark.
+
+  The three disagree on the ticket's core axis — HOW active vs muted is expressed:
+    A "Signal"    — color glyph on a constant dark tile; state = glyph color.
+    B "Monoline"  — thin outline glyph; state = a status dot + brightness.
+    C "Tile-flip" — the whole key lights up; active = accent-filled tile.
+
+  Open it: `open packages/plugin/prototypes/icon-system.prototype.html`
+  Delete when the spec is decided.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Icon visual system — prototype</title>
+<style>
+  :root {
+    --gray900:#1F1E1E; --white:#FFFFFF; --red:#D04841;
+    --blue:#5A82DE; --green:#09825D; --orange:#BB5504; --purple:#995FC3;
+    --muted:#6B6A6A; --bg:#0c0c0e;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; padding:2.5rem 2rem 6rem; background:var(--bg);
+    color:#e8e8ea; font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  h1 { font-size:1.15rem; margin:0 0 .25rem; }
+  .sub { color:#9a9aa2; margin:0 0 2rem; max-width:60ch; }
+  .sub b { color:#e8e8ea; }
+  section { margin:0 0 2.5rem; }
+  section > h2 { font-size:.8rem; text-transform:uppercase; letter-spacing:.08em;
+    color:#8a8a92; border-bottom:1px solid #26262b; padding-bottom:.4rem; margin:0 0 1rem; }
+  .row { display:flex; flex-wrap:wrap; gap:1.25rem; }
+  .cell { text-align:center; }
+  /* a Stream Deck key: rounded black tile */
+  .key { position:relative; width:84px; height:84px; border-radius:14px; background:var(--gray900);
+    display:grid; place-items:center; box-shadow:0 1px 0 #000, inset 0 0 0 1px #2a2a2f; }
+  /* native Stream Deck key title (dynamic text), reserved top band */
+  .key .title { position:absolute; top:5px; left:0; right:0; text-align:center;
+    font-size:11px; font-weight:600; letter-spacing:.2px; color:#f0f0f2;
+    text-shadow:0 1px 2px rgba(0,0,0,.9); pointer-events:none; }
+  .key.flip-green  { background:var(--green); }
+  .key.flip-blue   { background:var(--blue); }
+  .key.flip-muted  { background:#242327; box-shadow:inset 0 0 0 1px #34343a; }
+  .key svg { width:72px; height:72px; display:block; }
+  .cap  { margin-top:.45rem; font-size:.72rem; color:#c7c7cd; }
+  .cap small { display:block; color:#7d7d85; font-size:.66rem; }
+  /* light-background sanity strip for the mono-white category icon */
+  .key.light { background:#f3f3f4; box-shadow:inset 0 0 0 1px #d0d0d4; }
+  .note { color:#8a8a92; font-size:.78rem; margin:.4rem 0 0; max-width:64ch; }
+
+  #bar { position:fixed; left:50%; bottom:1.25rem; transform:translateX(-50%);
+    display:flex; align-items:center; gap:.75rem; background:#fff; color:#111;
+    padding:.5rem .6rem; border-radius:999px; box-shadow:0 6px 24px rgba(0,0,0,.5);
+    font-weight:600; z-index:99; }
+  #bar button { border:0; background:#111; color:#fff; width:30px; height:30px;
+    border-radius:999px; font-size:1rem; cursor:pointer; }
+  #bar .lbl { min-width:16ch; text-align:center; }
+</style>
+</head>
+<body>
+  <h1>Icon visual system — prototype <span style="color:#7d7d85;font-weight:400">(ticket #7)</span></h1>
+  <p class="sub">
+    Three ways to build the whole icon set. They agree on the palette
+    (<b style="color:#D04841">Red400</b> accent, <b style="color:#5A82DE">Blue</b>,
+    <b style="color:#09825D">Green</b>, gray <b>#1F1E1E</b>, white) and on using
+    <b>original glyphs</b> (no Tailscale nine-dot mark — per the brand research).
+    They <b>disagree on how a key shows active vs&nbsp;muted</b>. Flip with the bar
+    below or&nbsp;<b>← / →</b>. Tell me which state model wins and which glyphs to keep.
+  </p>
+  <p class="note" style="margin:0 0 1.5rem">
+    Each action key now reserves a <b>top band for the tailnet name</b>
+    (<code>van-scylla</code>; the Copy IP key shows the device IP) — this is a
+    native Stream&nbsp;Deck <b>title</b> (dynamic text the plugin sets), so the art
+    is nudged down to leave headroom. Glyph source is provisional pending the
+    headscale-icon research.
+  </p>
+
+  <div id="root"></div>
+
+  <div id="bar">
+    <button id="prev" aria-label="previous">‹</button>
+    <span class="lbl" id="lbl"></span>
+    <button id="next" aria-label="next">›</button>
+  </div>
+
+<script>
+const P = { gray900:'#1F1E1E', white:'#FFFFFF', red:'#D04841', blue:'#5A82DE',
+            green:'#09825D', muted:'#6B6A6A' };
+
+// ---- glyph primitives (72x72 viewBox), parameterised by color + stroke width ----
+// Each returns inner SVG markup. `sw` = stroke width, `c` = primary color.
+
+// wifi / broadcast "signal" — dot + expanding arcs (Connect)
+const gSignal = (c, sw=6) => `
+  <g fill="none" stroke="${c}" stroke-width="${sw}" stroke-linecap="round">
+    <path d="M23 44 a18 18 0 0 1 26 0"/>
+    <path d="M16 37 a28 28 0 0 1 40 0"/>
+  </g>
+  <circle cx="36" cy="50" r="5.5" fill="${c}"/>`;
+
+// interlocking chain links (Connect, monoline)
+const gLink = (c, sw=5) => `
+  <g fill="none" stroke="${c}" stroke-width="${sw}" stroke-linecap="round">
+    <rect x="14" y="28" width="26" height="16" rx="8"/>
+    <rect x="32" y="28" width="26" height="16" rx="8"/>
+  </g>`;
+
+// power symbol (Connect, bold tile-flip)
+const gPower = (c, sw=6) => `
+  <g fill="none" stroke="${c}" stroke-width="${sw}" stroke-linecap="round">
+    <path d="M25 27 a17 17 0 1 0 22 0"/>
+    <line x1="36" y1="18" x2="36" y2="38"/>
+  </g>`;
+
+// node with an arrow leaving to the upper-right (Exit Node)
+const gExitArrow = (c, sw=5) => `
+  <g fill="none" stroke="${c}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="30" cy="42" r="15"/>
+    <path d="M40 32 L54 18"/>
+    <path d="M44 17 L55 17 L55 28"/>
+  </g>`;
+
+// doorway with an out-arrow (Exit Node, monoline)
+const gDoor = (c, sw=5) => `
+  <g fill="none" stroke="${c}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M40 16 L24 16 L24 56 L40 56"/>
+    <path d="M30 36 L52 36"/>
+    <path d="M44 28 L54 36 L44 44"/>
+  </g>`;
+
+// globe with meridian + out-arrow (Exit Node, bold)
+const gGlobe = (c, sw=5) => `
+  <g fill="none" stroke="${c}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="34" cy="38" r="17"/>
+    <ellipse cx="34" cy="38" rx="7" ry="17"/>
+    <line x1="17" y1="38" x2="51" y2="38"/>
+  </g>`;
+
+// overlapping rounded squares — copy (Copy IP)
+const gCopy = (c, sw=5, tileBg=P.gray900) => `
+  <g fill="none" stroke="${c}" stroke-width="${sw}" stroke-linejoin="round">
+    <rect x="28" y="16" width="28" height="28" rx="6"/>
+    <rect x="16" y="28" width="28" height="28" rx="6" fill="${tileBg}"/>
+  </g>`;
+
+// clipboard (Copy IP, monoline)
+const gClipboard = (c, sw=5) => `
+  <g fill="none" stroke="${c}" stroke-width="${sw}" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="20" y="20" width="32" height="38" rx="5"/>
+    <rect x="28" y="14" width="16" height="10" rx="3" fill="${P.gray900}"/>
+    <line x1="28" y1="36" x2="44" y2="36"/>
+    <line x1="28" y1="45" x2="40" y2="45"/>
+  </g>`;
+
+// plugin identity mark — original "mesh" of three linked nodes (no nine-dot mark)
+const gMesh = (c, dotFill=null) => {
+  const d = dotFill || c;
+  return `
+  <g fill="none" stroke="${c}" stroke-width="4" stroke-linecap="round">
+    <line x1="24" y1="46" x2="36" y2="24"/>
+    <line x1="36" y1="24" x2="48" y2="46"/>
+    <line x1="24" y1="46" x2="48" y2="46"/>
+  </g>
+  <circle cx="36" cy="24" r="7" fill="${d}"/>
+  <circle cx="24" cy="46" r="7" fill="${d}"/>
+  <circle cx="48" cy="46" r="7" fill="${d}"/>`;
+};
+
+// small status dot bottom-right (used by variant B)
+const statusDot = (filled, color) => filled
+  ? `<circle cx="56" cy="54" r="8" fill="${color}" stroke="${P.gray900}" stroke-width="3"/>`
+  : `<circle cx="56" cy="54" r="7" fill="none" stroke="${P.muted}" stroke-width="3"/>`;
+
+// action glyphs are nudged down to leave a top band clear for the tailnet title
+const svg = (inner, shift=0) => `<svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg"><g transform="translate(0 ${shift})">${inner}</g></svg>`;
+
+// ---- the three systems ------------------------------------------------------
+// each returns {inner, keyClass} for a given (action, state)
+const VARIANTS = {
+  A: { name:'Signal — color glyph, constant tile',
+    render(action, state) {
+      const active = { connected:P.green, exit_node_on:P.blue }[state];
+      const muted  = { disconnected:true, exit_node_off:true }[state];
+      const c = active ? active : muted ? P.muted : P.white;
+      if (action==='connect')   return { inner: gSignal(active?active:c) };
+      if (action==='exit-node') return { inner: gExitArrow(c) };
+      if (action==='copy-ip')   return { inner: gCopy(P.red) };
+    }},
+  B: { name:'Monoline — outline + status dot',
+    render(action, state) {
+      const on  = state==='connected' || state==='exit_node_on';
+      const off = state==='disconnected' || state==='exit_node_off';
+      const glyphC = off ? P.muted : P.white;
+      const dotColor = state.startsWith('exit') ? P.blue : P.green;
+      let g='';
+      if (action==='connect')   g = gLink(glyphC);
+      if (action==='exit-node') g = gDoor(glyphC);
+      if (action==='copy-ip')   return { inner: gClipboard(P.white) };
+      const dot = (on||off) ? statusDot(on, dotColor) : '';
+      return { inner: g + dot };
+    }},
+  C: { name:'Tile-flip — the whole key lights up',
+    render(action, state) {
+      if (action==='connect') {
+        if (state==='connected')    return { inner: gPower(P.gray900), keyClass:'flip-green' };
+        if (state==='disconnected') return { inner: gPower(P.muted),   keyClass:'flip-muted' };
+        return { inner: gPower(P.white) };
+      }
+      if (action==='exit-node') {
+        if (state==='exit_node_on')  return { inner: gGlobe(P.gray900), keyClass:'flip-blue' };
+        if (state==='exit_node_off') return { inner: gGlobe(P.muted),   keyClass:'flip-muted' };
+        return { inner: gGlobe(P.white) };
+      }
+      if (action==='copy-ip') return { inner: gCopy(P.red) };
+    }},
+};
+
+const ACTIONS = [
+  { id:'connect',   label:'Connect',   states:[['default','base (in action list)'],['connected','connected · ACTIVE'],['disconnected','disconnected · muted']] },
+  { id:'exit-node', label:'Exit Node', states:[['default','base'],['exit_node_on','on · ACTIVE'],['exit_node_off','off · muted']] },
+  { id:'copy-ip',   label:'Copy IP',   states:[['default','single state']] },
+];
+
+function draw() {
+  const v = new URLSearchParams(location.search).get('variant') || 'A';
+  const key = VARIANTS[v] ? v : 'A';
+  document.getElementById('lbl').textContent = `${key} — ${VARIANTS[key].name}`;
+
+  let html = '';
+  for (const a of ACTIONS) {
+    html += `<section><h2>${a.label} action</h2><div class="row">`;
+    for (const [st, cap] of a.states) {
+      const { inner, keyClass='' } = VARIANTS[key].render(a.id, st);
+      const title = a.id==='copy-ip' ? '100.x.y.z' : 'van-scylla';
+      html += `<div class="cell"><div class="key ${keyClass}"><span class="title">${title}</span>${svg(inner, 8)}</div>
+        <div class="cap">${st}<small>${cap}</small></div></div>`;
+    }
+    html += `</div></section>`;
+  }
+
+  // plugin identity + category (mono-white, required) — same across variants
+  html += `<section><h2>Plugin identity &amp; category</h2>
+    <div class="row">
+      <div class="cell"><div class="key">${svg(gMesh(P.white, P.red))}</div>
+        <div class="cap">plugin / marketplace<small>color mark</small></div></div>
+      <div class="cell"><div class="key">${svg(gMesh(P.white))}</div>
+        <div class="cap">category icon<small>mono-white (required)</small></div></div>
+      <div class="cell"><div class="key light">${svg(gMesh('#1F1E1E'))}</div>
+        <div class="cap">on light bg<small>silhouette sanity check</small></div></div>
+    </div>
+    <p class="note">The plugin mark is an <b>original mesh of three linked nodes</b> — it
+    must survive as a flat white silhouette (category &amp; action-list icons are
+    mono-white + transparent per Elgato). Same glyph, two fills.</p>
+  </section>`;
+
+  document.getElementById('root').innerHTML = html;
+}
+
+const order = ['A','B','C'];
+function go(delta) {
+  const cur = new URLSearchParams(location.search).get('variant') || 'A';
+  const i = (order.indexOf(cur) + delta + order.length) % order.length;
+  history.replaceState(null,'',`?variant=${order[i]}`);
+  draw();
+}
+document.getElementById('prev').onclick = () => go(-1);
+document.getElementById('next').onclick = () => go(1);
+addEventListener('keydown', e => {
+  if (/input|textarea/i.test(e.target.tagName)) return;
+  if (e.key==='ArrowLeft')  go(-1);
+  if (e.key==='ArrowRight') go(1);
+});
+draw();
+</script>
+</body>
+</html>
