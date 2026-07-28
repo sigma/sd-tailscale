@@ -36,13 +36,19 @@
         background: #3d3d3d;
         border: 1px solid #1b1b1b;
         border-radius: 4px;
+        box-sizing: border-box;
       }
-      input {
+      input#exitNode {
         margin-top: 10px;
       }
       p.hint {
         margin: 8px 0 0;
         color: #808080;
+      }
+      hr {
+        margin: 16px 0 12px;
+        border: none;
+        border-top: 1px solid #1b1b1b;
       }
     </style>
   </head>
@@ -57,12 +63,23 @@
       that isn't listed yet.
     </p>
 
+    <hr />
+
+    <label for="binaryPath">Tailscale CLI path</label>
+    <input id="binaryPath" type="text" placeholder="auto-detect (PATH / app bundle)" />
+    <p class="hint">
+      Plugin-wide. Set this if the LED shows “No CLI” — e.g.
+      <code>/usr/local/bin/tailscale</code>. Leave blank to auto-detect.
+    </p>
+
     <script>
       let websocket = null;
       let uuid = null;
       let settings = {};
+      let globalSettings = {};
       const select = document.getElementById("node");
       const input = document.getElementById("exitNode");
+      const binaryPath = document.getElementById("binaryPath");
 
       // The Stream Deck app calls this global to hand us the socket.
       function connectElgatoStreamDeckSocket(port, propertyInspectorUUID, _event, _info, actionInfo) {
@@ -77,13 +94,18 @@
         websocket = new WebSocket("ws://127.0.0.1:" + port);
         websocket.onopen = () => {
           send({ event: "registerPropertyInspector", uuid });
-          // Ask the plugin for the usable exit nodes it sees in live status.
+          // Ask the plugin for the usable exit nodes it sees in live status,
+          // and for plugin-wide settings (the binary path lives there).
           sendToPlugin({ event: "getExitNodes" });
+          send({ event: "getGlobalSettings", context: uuid });
         };
         websocket.onmessage = (msg) => {
           const data = JSON.parse(msg.data);
           if (data.event === "sendToPropertyInspector" && data.payload?.event === "exitNodes") {
             renderExitNodes(data.payload.exitNodes || []);
+          } else if (data.event === "didReceiveGlobalSettings") {
+            globalSettings = data.payload?.settings || {};
+            binaryPath.value = globalSettings.binaryPath || "";
           }
         };
       }
@@ -133,6 +155,13 @@
         // Free-text overrides the dropdown; drop back to the custom option.
         select.value = "";
         store(input.value);
+      });
+
+      // The binary path is plugin-wide, so it goes to global settings. The
+      // plugin re-resolves the CLI the moment these land.
+      binaryPath.addEventListener("change", () => {
+        globalSettings = { ...globalSettings, binaryPath: binaryPath.value.trim() };
+        send({ event: "setGlobalSettings", context: uuid, payload: globalSettings });
       });
     </script>
   </body>
