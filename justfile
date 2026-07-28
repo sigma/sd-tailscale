@@ -38,6 +38,10 @@ link:
 validate:
     pnpm -F @sd-tailscale/plugin validate
 
+# Render source SVGs (packages/plugin/icons/) to committed PNGs in imgs/
+render-icons:
+    pnpm -F @sd-tailscale/plugin run render:icons
+
 # Restart the plugin in Stream Deck
 restart:
     pnpm -F @sd-tailscale/plugin exec streamdeck restart {{uuid}}

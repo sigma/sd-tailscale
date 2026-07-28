@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Throwaway sample source proving the SVG→PNG pipeline end-to-end.
+  Not real art — the actual icon sources graduate from the map's
+  "authoring" work. Pure shapes only (no live text) so resvg renders
+  it identically on every platform. Square 72-unit viewBox → square PNGs.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" width="72" height="72">
+  <rect x="4" y="4" width="64" height="64" rx="14" fill="#1a1a2e"/>
+  <g fill="#4b6ef5">
+    <circle cx="26" cy="26" r="5"/>
+    <circle cx="46" cy="26" r="5"/>
+    <circle cx="26" cy="46" r="5"/>
+    <circle cx="46" cy="46" r="5"/>
+    <circle cx="36" cy="36" r="6.5" fill="#ffffff"/>
+  </g>
+</svg>
