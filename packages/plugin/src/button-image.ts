@@ -134,6 +134,33 @@ function baseIconUrl(stem: string, size: IconSize, iconsDir: URL): URL {
   return new URL(`${stem}${suffix}.png`, iconsDir);
 }
 
+// `renderButtonImage` is a pure function of (stem, name, size, iconsDir), and
+// each argument ranges over a tiny fixed set — five stems, two sizes, and the
+// one or two short tailnet names a user actually switches between — so the whole
+// universe of outputs is a handful of images for the life of the plugin. We
+// memoize aggressively: the `StatusMonitor` repaints every ~2s, and without a
+// cache each tick re-read the base PNG and re-ran resvg (with a full system-font
+// scan), pinning a CPU core. On a hit we return the cached data URI and touch
+// neither disk nor resvg. The key space is naturally bounded, so the unbounded
+// Maps can't grow without bound — no eviction policy needed.
+const uriCache = new Map<string, string>();
+const basePngCache = new Map<string, Buffer>();
+// Test seam: how many times a URI cache miss actually did the render work. A
+// second call with identical args must not bump this — that's the cache proof.
+let renderWork = 0;
+
+/** Clear both caches (and the work counter). For test isolation only. */
+export function clearButtonImageCache(): void {
+  uriCache.clear();
+  basePngCache.clear();
+  renderWork = 0;
+}
+
+/** Test seam: cache-miss renders performed since the last clear. */
+export function buttonImageRenderCount(): number {
+  return renderWork;
+}
+
 /**
  * Render a ready-for-`setImage` data URI for base icon `stem` (e.g.
  * `"connected"`, `"exit_node_on"`, `"copy_ip"`) at `size`, with `name`'s
@@ -141,6 +168,9 @@ function baseIconUrl(stem: string, size: IconSize, iconsDir: URL): URL {
  * calls; reads the committed base PNG from disk. `size` defaults to 144 (@2x).
  * `iconsDir` is a test seam — production callers take the bundle-relative
  * default, which points at the committed icons beside the running plugin.
+ *
+ * Memoized on all four inputs (see the cache note above): repeat calls — the
+ * common case, since the poll repaints unchanged state — are a Map lookup.
  */
 export function renderButtonImage(
   stem: string,
@@ -148,6 +178,21 @@ export function renderButtonImage(
   size: IconSize = 144,
   iconsDir: URL = ICONS_DIR,
 ): string {
-  const basePng = readFileSync(baseIconUrl(stem, size, iconsDir));
-  return toSetImageUri(compositeButtonImage(basePng, name, size));
+  // `name` is the only free-form field, so it goes last: the fixed-shape prefix
+  // can't collide with a name that happens to contain the separator.
+  const key = `${size}\0${stem}\0${iconsDir.href}\0${name}`;
+  const cached = uriCache.get(key);
+  if (cached !== undefined) return cached;
+
+  const baseKey = `${size}\0${stem}\0${iconsDir.href}`;
+  let basePng = basePngCache.get(baseKey);
+  if (basePng === undefined) {
+    basePng = readFileSync(baseIconUrl(stem, size, iconsDir));
+    basePngCache.set(baseKey, basePng);
+  }
+
+  const uri = toSetImageUri(compositeButtonImage(basePng, name, size));
+  renderWork += 1;
+  uriCache.set(key, uri);
+  return uri;
 }

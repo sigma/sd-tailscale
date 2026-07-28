@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs";
 
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import {
+  buttonImageRenderCount,
+  clearButtonImageCache,
   compositeButtonImage,
   fitNameToStrip,
   type IconSize,
@@ -84,7 +86,33 @@ describe("toSetImageUri", () => {
   });
 });
 
+describe("renderButtonImage caching", () => {
+  beforeEach(() => clearButtonImageCache());
+
+  it("renders once per distinct (stem, name, size) and serves repeats from cache", () => {
+    const first = renderButtonImage("connected", "van-scylla", 144, ICONS_DIR);
+    expect(buttonImageRenderCount()).toBe(1);
+
+    const second = renderButtonImage("connected", "van-scylla", 144, ICONS_DIR);
+    expect(second).toBe(first); // identical output...
+    expect(buttonImageRenderCount()).toBe(1); // ...and no second render (the poll's hot path)
+  });
+
+  it("treats a changed name, stem, or size as a distinct key", () => {
+    renderButtonImage("connected", "van-scylla", 144, ICONS_DIR);
+    renderButtonImage("connected", "other-net", 144, ICONS_DIR); // name changed
+    renderButtonImage("disconnected", "van-scylla", 144, ICONS_DIR); // stem changed
+    renderButtonImage("connected", "van-scylla", 72, ICONS_DIR); // size changed
+    expect(buttonImageRenderCount()).toBe(4);
+
+    renderButtonImage("connected", "van-scylla", 144, ICONS_DIR); // back to the first key
+    expect(buttonImageRenderCount()).toBe(4); // still a hit
+  });
+});
+
 describe("renderButtonImage", () => {
+  beforeEach(() => clearButtonImageCache());
+
   it("resolves a committed base icon and returns a setImage data URI", () => {
     const uri = renderButtonImage("connected", "van-scylla", 144, ICONS_DIR);
     expect(uri.startsWith("data:image/png;base64,")).toBe(true);
