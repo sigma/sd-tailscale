@@ -25,6 +25,9 @@ importers:
       '@elgato/streamdeck':
         specifier: ^2.1.0
         version: 2.1.0
+      '@resvg/resvg-js':
+        specifier: ^2.6.2
+        version: 2.6.2
       '@sd-tailscale/core':
         specifier: workspace:*
         version: link:../core
@@ -32,9 +35,6 @@ importers:
       '@elgato/cli':
         specifier: ^1.7.4
         version: 1.7.4(@types/node@20.19.43)
-      '@resvg/resvg-js':
-        specifier: ^2.6.2
-        version: 2.6.2
       '@rollup/plugin-commonjs':
         specifier: ^28.0.0
         version: 28.0.9(rollup@4.62.3)
