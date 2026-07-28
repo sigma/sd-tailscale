@@ -20,6 +20,6 @@ export function buildActions(client: TailscaleClient, monitor: StatusMonitor): S
   return [
     new ConnectAction(uuid("connect"), client, monitor),
     new ExitNodeAction(uuid("exit-node"), client, monitor),
-    new CopyIpAction(uuid("copy-ip"), client),
+    new CopyIpAction(uuid("copy-ip"), client, monitor),
   ];
 }
