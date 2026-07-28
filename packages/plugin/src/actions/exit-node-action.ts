@@ -62,9 +62,13 @@ export class ExitNodeAction extends SingletonAction {
   }
 
   #refresh(): void {
+    const missing = this.#monitor.health === "binary-missing";
     const active = exitNodeActive(this.#monitor.latest);
     for (const action of this.actions) {
-      if (action.isKey()) void action.setState(active ? 0 : 1);
+      if (!action.isKey()) continue;
+      void action.setState(active ? 0 : 1);
+      // See ConnectAction#refresh: mark "CLI not found" apart from daemon-down.
+      void action.setTitle(missing ? "No\nCLI" : "");
     }
   }
 }

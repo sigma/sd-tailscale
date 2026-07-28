@@ -57,9 +57,14 @@ export class ConnectAction extends SingletonAction {
   }
 
   #refresh(): void {
+    const missing = this.#monitor.health === "binary-missing";
     const connected = this.#monitor.latest?.BackendState === "Running";
     for (const action of this.actions) {
-      if (action.isKey()) void action.setState(connected ? 0 : 1);
+      if (!action.isKey()) continue;
+      void action.setState(connected ? 0 : 1);
+      // Overlay a marker when the CLI can't be found — distinct from the plain
+      // disconnected LED that means the daemon is merely down. Cleared on recovery.
+      void action.setTitle(missing ? "No\nCLI" : "");
     }
   }
 }
