@@ -38,6 +38,14 @@ export class ConnectAction extends SingletonAction {
   readonly #monitor: StatusMonitor;
   /** Local `switch --list` cache; see the class doc. `null` until first loaded. */
   #profiles: Profile[] | null = null;
+  /**
+   * Last painted signature per key instance (by `action.id`). The poll fires
+   * this refresh every ~2s; we skip the `setState`/`setTitle`/`setImage` IPC
+   * when nothing visible changed for that key. Per-key because each instance can
+   * target a different profile and so show a different name. Dropped on
+   * will-appear so a reappearing key always repaints onto its fresh canvas.
+   */
+  readonly #painted = new Map<string, string>();
 
   constructor(uuid: string, client: TailscaleClient, monitor: StatusMonitor) {
     super();
@@ -48,6 +56,7 @@ export class ConnectAction extends SingletonAction {
   }
 
   override async onWillAppear(ev: WillAppearEvent): Promise<void> {
+    this.#painted.delete(ev.action.id);
     await this.#maybeRefreshProfiles(ev.payload.settings as ConnectSettings);
     await this.#refresh();
   }
@@ -97,17 +106,21 @@ export class ConnectAction extends SingletonAction {
     const connected = this.#monitor.latest?.BackendState === "Running";
     const state = connected ? 0 : 1;
     const stem = connected ? "connected" : "disconnected";
+    const title = missing ? "No\nCLI" : "";
     for (const action of this.actions) {
       if (!action.isKey()) continue;
-      void action.setState(state);
-      // Overlay a marker when the CLI can't be found — distinct from the plain
-      // disconnected LED that means the daemon is merely down. Cleared on recovery.
-      void action.setTitle(missing ? "No\nCLI" : "");
       // Name selection is per instance: each key can target a different profile.
       const { profile } = (await action.getSettings()) as ConnectSettings;
       const name = connectTailnetName(this.#monitor.latest, profile, this.#profiles);
+      const sig = `${state}\0${title}\0${stem}\0${name}`;
+      if (this.#painted.get(action.id) === sig) continue; // unchanged since last paint
+      void action.setState(state);
+      // Overlay a marker when the CLI can't be found — distinct from the plain
+      // disconnected LED that means the daemon is merely down. Cleared on recovery.
+      void action.setTitle(title);
       const image = renderButtonImageSafe(stem, name);
       if (image) void action.setImage(image, { state });
+      this.#painted.set(action.id, sig);
     }
   }
 }

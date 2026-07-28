@@ -22,6 +22,15 @@ import { activeTailnetName } from "../tailnet-name.js";
 export class CopyIpAction extends SingletonAction {
   readonly #client: TailscaleClient;
   readonly #monitor: StatusMonitor;
+  /**
+   * Last painted name per key instance (by `action.id`). The `StatusMonitor`
+   * fires this refresh every ~2s, but this button's only visible input is the
+   * tailnet name, which changes only on an account switch — so we skip the
+   * `setImage` IPC on every unchanged tick and repaint solely when the name
+   * actually moves. A key is dropped from the map on will-appear so it always
+   * repaints onto its fresh canvas.
+   */
+  readonly #painted = new Map<string, string>();
 
   constructor(uuid: string, client: TailscaleClient, monitor: StatusMonitor) {
     super();
@@ -31,7 +40,8 @@ export class CopyIpAction extends SingletonAction {
     this.#monitor.onChange(() => this.#refresh());
   }
 
-  override onWillAppear(_ev: WillAppearEvent): void {
+  override onWillAppear(ev: WillAppearEvent): void {
+    this.#painted.delete(ev.action.id);
     this.#refresh();
   }
 
@@ -53,11 +63,14 @@ export class CopyIpAction extends SingletonAction {
   #refresh(): void {
     // Single-state action: just repaint the copy-ip icon with the active tailnet
     // name baked on (blank strip → plain icon when there's no name).
-    const image = renderButtonImageSafe("copy_ip", activeTailnetName(this.#monitor.latest));
-    if (!image) return;
+    const name = activeTailnetName(this.#monitor.latest);
     for (const action of this.actions) {
       if (!action.isKey()) continue;
+      if (this.#painted.get(action.id) === name) continue; // unchanged since last paint
+      const image = renderButtonImageSafe("copy_ip", name);
+      if (!image) continue;
       void action.setImage(image);
+      this.#painted.set(action.id, name);
     }
   }
 }
