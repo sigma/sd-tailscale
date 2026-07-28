@@ -25,17 +25,22 @@ export interface CommandRunner {
  * passed as an array, so nothing is word-split or glob-expanded). A non-zero
  * exit resolves normally with its `code` — the client decides what counts as a
  * failure. Only a spawn failure (e.g. binary not on PATH) rejects.
+ *
+ * `bin` may be a string or a resolver called on **every** run, so the host can
+ * repoint the binary at runtime (e.g. when the user edits the path in the
+ * Property Inspector) without rebuilding the client.
  */
 export class ExecFileRunner implements CommandRunner {
-  readonly #bin: string;
+  readonly #bin: () => string;
 
-  constructor(bin = "tailscale") {
-    this.#bin = bin;
+  constructor(bin: string | (() => string) = "tailscale") {
+    this.#bin = typeof bin === "function" ? bin : () => bin;
   }
 
   run(args: string[]): Promise<CommandResult> {
+    const bin = this.#bin();
     return new Promise((resolve, reject) => {
-      execFile(this.#bin, args, { encoding: "utf8" }, (error, stdout, stderr) => {
+      execFile(bin, args, { encoding: "utf8" }, (error, stdout, stderr) => {
         if (error && typeof (error as { code?: unknown }).code !== "number") {
           // Spawn failure (ENOENT, EACCES, …) — the binary never ran.
           reject(error);
