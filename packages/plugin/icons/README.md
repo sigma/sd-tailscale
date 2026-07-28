@@ -17,11 +17,15 @@ render-approach research; see `docs/research/svg-to-png-rendering.md`.
 
 ## Convention
 
-The source tree **mirrors** the output tree, one size pair per source:
+The source tree **mirrors** the output tree; each source renders to the size
+pair its **asset class** needs (Elgato spec matrix, research #5):
 
-| Source                        | Output                                                    |
-| ----------------------------- | --------------------------------------------------------- |
-| `icons/<path>/<name>.svg`     | `imgs/<path>/<name>.png` (72×72), `<name>@2x.png` (144×144) |
+| Source                          | Output `.png` / `@2x.png` | Class                     |
+| ------------------------------- | ------------------------- | ------------------------- |
+| `icons/actions/<name>.svg`      | 72×72 / 144×144           | action key image          |
+| `icons/plugin/category-icon.svg`| 28×28 / 56×56             | manifest `CategoryIcon`   |
+| `icons/plugin/marketplace.svg`  | 256×256 / 512×512         | manifest `Icon` (plugin)  |
+| _(anything else, e.g. `_sample/`)_ | 72×72 / 144×144        | action-key fallback       |
 
 - Author each SVG with a **square viewBox** — resvg fits to width, so a square
   source yields square PNGs.
@@ -34,7 +38,12 @@ map's authoring work.
 
 ## Adding other sizes
 
-`RENDER_SIZES` in `scripts/render-icons.mjs` fixes the 72 / @2x 144 action-key
-pair. Other asset classes (mono category 28×28, plugin 256/512, marketplace
-288×288) get their own sizes when their sources are authored — extend that array
-then.
+Sizing lives in `scripts/render-icons.mjs`: `DEFAULT_SIZES` is the 72 / @2x 144
+action-key pair, and `SIZES_BY_REL` overrides it per source path for the
+non-key classes. To render a new class at its own size, add an entry keyed by
+the source's `icons/`-relative path (without extension).
+
+Marketplace **listing** art (288×288 + 1920×960 banner) is uploaded to the
+Elgato Marketplace portal, not shipped in the `.sdPlugin` bundle, and a 2:1
+banner can't come from a square source — so it's intentionally out of this
+pipeline.
