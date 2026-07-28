@@ -33,6 +33,12 @@ export default {
     file: `${sdPlugin}/bin/plugin.js`,
     sourcemap: isWatching,
   },
+  // `@resvg/resvg-js` is a *native* module — Rollup would try to inline its
+  // `.node` binary and choke. Keep it external so the bundle emits a bare
+  // `import` that Node resolves from the hoisted workspace node_modules at run
+  // time. (Redistributable packaging of the .node binary is out of scope — see
+  // issue #24's body / #33.)
+  external: [/@resvg\/resvg-js/],
   plugins: [
     typescript(),
     nodeResolve({ browser: false, exportConditions: ["node"], preferBuiltins: true }),
