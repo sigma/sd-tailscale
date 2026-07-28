@@ -69,6 +69,18 @@ export function parseExitNodes(status: TailscaleStatus | null): ExitNode[] {
   return nodes.sort((a, b) => (a.label || a.ip).localeCompare(b.label || b.ip));
 }
 
+/**
+ * The short tailnet name: the first DNS label of a MagicDNS suffix, e.g.
+ * `van-scylla.ts.net` -> `van-scylla`. This is what a button shows to name the
+ * tailnet it's attached to. Guards the absent case (`undefined`/empty) with
+ * `""` so callers can treat "no derivable name" uniformly. Tolerates the
+ * trailing-dot form (`van-scylla.ts.net.`) that `status --json` can emit.
+ */
+export function shortTailnetName(magicDNSSuffix: string | undefined): string {
+  if (!magicDNSSuffix) return "";
+  return magicDNSSuffix.split(".")[0] ?? "";
+}
+
 /** A login profile as listed by `tailscale switch --list`. */
 export interface Profile {
   id: string;

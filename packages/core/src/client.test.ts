@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { TailscaleClient } from "./client.js";
 import type { CommandResult, CommandRunner } from "./runner.js";
-import { parseExitNodes, parseProfiles } from "./status.js";
+import { parseExitNodes, parseProfiles, shortTailnetName } from "./status.js";
 
 /** A runner that records the argv it saw and replays a scripted result. */
 class FakeRunner implements CommandRunner {
@@ -168,5 +168,27 @@ describe("parseExitNodes", () => {
   it("returns nothing when there are no peers", () => {
     expect(parseExitNodes({})).toEqual([]);
     expect(parseExitNodes(null)).toEqual([]);
+  });
+});
+
+describe("shortTailnetName", () => {
+  it("takes the first DNS label of a MagicDNS suffix", () => {
+    expect(shortTailnetName("van-scylla.ts.net")).toBe("van-scylla");
+  });
+
+  it("returns a single-label suffix unchanged", () => {
+    expect(shortTailnetName("van-scylla")).toBe("van-scylla");
+  });
+
+  it("tolerates the trailing-dot form seen in status --json", () => {
+    expect(shortTailnetName("van-scylla.ts.net.")).toBe("van-scylla");
+  });
+
+  it("returns an empty string for empty input", () => {
+    expect(shortTailnetName("")).toBe("");
+  });
+
+  it("returns an empty string when the suffix is undefined", () => {
+    expect(shortTailnetName(undefined)).toBe("");
   });
 });
