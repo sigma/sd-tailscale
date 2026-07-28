@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Exit Node</title>
+    <!--
+      Property Inspector for the Exit Node action. Self-contained vanilla HTML/JS
+      (see connect.html for the rationale). Stores the exit node to route through
+      as a plain per-key setting; the action toggles it on/off against live
+      status.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        padding: 10px 12px 16px;
+        font: 12px/1.4 "Segoe UI", -apple-system, system-ui, sans-serif;
+        color: #d8d8d8;
+        background: #2d2d2d;
+      }
+      label {
+        display: block;
+        margin-bottom: 4px;
+        color: #969696;
+      }
+      input {
+        width: 100%;
+        padding: 5px 6px;
+        color: #d8d8d8;
+        background: #3d3d3d;
+        border: 1px solid #1b1b1b;
+        border-radius: 4px;
+      }
+      p.hint {
+        margin: 8px 0 0;
+        color: #808080;
+      }
+    </style>
+  </head>
+  <body>
+    <label for="exitNode">Exit node</label>
+    <input id="exitNode" type="text" placeholder="100.x.y.z or host.tailnet.ts.net" />
+    <p class="hint">The peer IP or MagicDNS name to route traffic through.</p>
+
+    <script>
+      let websocket = null;
+      let uuid = null;
+      let settings = {};
+      const input = document.getElementById("exitNode");
+
+      function connectElgatoStreamDeckSocket(port, propertyInspectorUUID, _event, _info, actionInfo) {
+        uuid = propertyInspectorUUID;
+        try {
+          settings = JSON.parse(actionInfo).payload.settings || {};
+        } catch {
+          settings = {};
+        }
+        input.value = settings.exitNode || "";
+
+        websocket = new WebSocket("ws://127.0.0.1:" + port);
+        websocket.onopen = () => {
+          send({ event: "registerPropertyInspector", uuid });
+        };
+      }
+
+      function send(obj) {
+        websocket?.send(JSON.stringify(obj));
+      }
+
+      input.addEventListener("input", () => {
+        settings = { ...settings, exitNode: input.value };
+        send({ event: "setSettings", context: uuid, payload: settings });
+      });
+    </script>
+  </body>
+</html>

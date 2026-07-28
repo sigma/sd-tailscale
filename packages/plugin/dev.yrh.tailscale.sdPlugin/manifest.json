@@ -1,0 +1,84 @@
+{
+	"$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+	"Name": "Tailscale",
+	"Version": "0.1.0.0",
+	"Author": "Yann Hodique",
+	"Description": "A Stream Deck plugin to control Tailscale on this machine.",
+	"Category": "Tailscale",
+	"URL": "https://github.com/sigma/sd-tailscale",
+	"Icon": "imgs/plugin/marketplace",
+	"CategoryIcon": "imgs/plugin/category-icon",
+	"CodePath": "bin/plugin.js",
+	"SDKVersion": 2,
+	"Software": {
+		"MinimumVersion": "6.5"
+	},
+	"OS": [
+		{
+			"Platform": "mac",
+			"MinimumVersion": "10.15"
+		},
+		{
+			"Platform": "windows",
+			"MinimumVersion": "10"
+		}
+	],
+	"Nodejs": {
+		"Version": "20",
+		"Debug": "enabled"
+	},
+	"UUID": "dev.yrh.tailscale",
+	"Actions": [
+		{
+			"Name": "Connect",
+			"UUID": "dev.yrh.tailscale.connect",
+			"Icon": "imgs/actions/connect",
+			"Tooltip": "Connect or disconnect Tailscale; optionally switch account",
+			"PropertyInspectorPath": "ui/connect.html",
+			"SupportedInMultiActions": false,
+			"DisableAutomaticStates": true,
+			"States": [
+				{
+					"Image": "imgs/actions/connected",
+					"TitleAlignment": "middle"
+				},
+				{
+					"Image": "imgs/actions/disconnected",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "Exit Node",
+			"UUID": "dev.yrh.tailscale.exit-node",
+			"Icon": "imgs/actions/exit_node",
+			"Tooltip": "Toggle routing through a configured exit node",
+			"PropertyInspectorPath": "ui/exit-node.html",
+			"SupportedInMultiActions": false,
+			"DisableAutomaticStates": true,
+			"States": [
+				{
+					"Image": "imgs/actions/exit_node_on",
+					"TitleAlignment": "middle"
+				},
+				{
+					"Image": "imgs/actions/exit_node_off",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "Copy IP",
+			"UUID": "dev.yrh.tailscale.copy-ip",
+			"Icon": "imgs/actions/copy_ip",
+			"Tooltip": "Copy this device's Tailscale IP to the clipboard",
+			"SupportedInMultiActions": true,
+			"States": [
+				{
+					"Image": "imgs/actions/copy_ip",
+					"TitleAlignment": "middle"
+				}
+			]
+		}
+	]
+}

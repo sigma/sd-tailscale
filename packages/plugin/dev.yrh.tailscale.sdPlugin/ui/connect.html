@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Connect</title>
+    <!--
+      Property Inspector for the Connect action. Deliberately self-contained
+      vanilla HTML/JS: a PI is a static file loaded by the Stream Deck app, NOT
+      part of the rollup bundle, so it carries no imports. It speaks the Stream
+      Deck PI websocket protocol directly (register + get/set settings +
+      sendToPlugin), and asks the plugin for the tailscale profile list to fill
+      the dropdown.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        padding: 10px 12px 16px;
+        font: 12px/1.4 "Segoe UI", -apple-system, system-ui, sans-serif;
+        color: #d8d8d8;
+        background: #2d2d2d;
+      }
+      label {
+        display: block;
+        margin-bottom: 4px;
+        color: #969696;
+      }
+      select {
+        width: 100%;
+        padding: 5px 6px;
+        color: #d8d8d8;
+        background: #3d3d3d;
+        border: 1px solid #1b1b1b;
+        border-radius: 4px;
+      }
+      p.hint {
+        margin: 8px 0 0;
+        color: #808080;
+      }
+    </style>
+  </head>
+  <body>
+    <label for="profile">Account / profile</label>
+    <select id="profile">
+      <option value="">Current profile</option>
+    </select>
+    <p class="hint">
+      On connect, switch to the selected Tailscale account before bringing the
+      tailnet up. Leave on “Current profile” to use whatever is active.
+    </p>
+
+    <script>
+      let websocket = null;
+      let uuid = null;
+      let settings = {};
+      const select = document.getElementById("profile");
+
+      // The Stream Deck app calls this global to hand us the socket.
+      function connectElgatoStreamDeckSocket(port, propertyInspectorUUID, _event, _info, actionInfo) {
+        uuid = propertyInspectorUUID;
+        try {
+          settings = JSON.parse(actionInfo).payload.settings || {};
+        } catch {
+          settings = {};
+        }
+
+        websocket = new WebSocket("ws://127.0.0.1:" + port);
+        websocket.onopen = () => {
+          send({ event: "registerPropertyInspector", uuid });
+          // Ask the plugin for the profile list.
+          sendToPlugin({ event: "getProfiles" });
+        };
+        websocket.onmessage = (msg) => {
+          const data = JSON.parse(msg.data);
+          if (data.event === "sendToPropertyInspector" && data.payload?.event === "profiles") {
+            renderProfiles(data.payload.profiles || []);
+          }
+        };
+      }
+
+      function send(obj) {
+        websocket?.send(JSON.stringify(obj));
+      }
+
+      function sendToPlugin(payload) {
+        send({ event: "sendToPlugin", action: "dev.yrh.tailscale.connect", context: uuid, payload });
+      }
+
+      function renderProfiles(profiles) {
+        // Keep the "Current profile" default, then append one option per profile.
+        select.length = 1;
+        for (const p of profiles) {
+          const opt = document.createElement("option");
+          opt.value = p.id && p.id !== "-" ? p.id : p.account;
+          opt.textContent = p.current ? `${p.account} (current)` : p.account;
+          select.appendChild(opt);
+        }
+        if (settings.profile != null) select.value = settings.profile;
+      }
+
+      select.addEventListener("change", () => {
+        settings = { ...settings, profile: select.value };
+        send({ event: "setSettings", context: uuid, payload: settings });
+      });
+    </script>
+  </body>
+</html>
