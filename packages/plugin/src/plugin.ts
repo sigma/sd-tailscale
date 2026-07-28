@@ -15,22 +15,31 @@ for (const action of buildActions(client, monitor)) {
   streamDeck.actions.registerAction(action);
 }
 
-// The Connect Property Inspector asks for the profile list on load; reply with
-// what the CLI reports so it can populate its dropdown. Non-getProfiles messages
-// are ignored.
+// A Property Inspector asks for a list on load; reply with what the CLI reports
+// so it can populate its dropdown. The Connect PI wants profiles; the Exit Node
+// PI wants the peers usable as exit nodes. Other messages are ignored.
+//
+// The replies are plain JSON; cast to the SDK's payload type without importing
+// its bundled JsonValue (not re-exported from the entry).
+type PIPayload = Parameters<typeof streamDeck.ui.sendToPropertyInspector>[0];
 streamDeck.ui.onSendToPlugin(async (ev) => {
   const payload = ev.payload as { event?: string } | undefined;
-  if (payload?.event !== "getProfiles") return;
   try {
-    const profiles = await client.listProfiles();
-    // The reply is plain JSON; cast to the SDK's payload type without importing
-    // its bundled JsonValue (not re-exported from the entry).
-    await streamDeck.ui.sendToPropertyInspector({
-      event: "profiles",
-      profiles,
-    } as unknown as Parameters<typeof streamDeck.ui.sendToPropertyInspector>[0]);
+    if (payload?.event === "getProfiles") {
+      const profiles = await client.listProfiles();
+      await streamDeck.ui.sendToPropertyInspector({
+        event: "profiles",
+        profiles,
+      } as unknown as PIPayload);
+    } else if (payload?.event === "getExitNodes") {
+      const exitNodes = await client.listExitNodes();
+      await streamDeck.ui.sendToPropertyInspector({
+        event: "exitNodes",
+        exitNodes,
+      } as unknown as PIPayload);
+    }
   } catch (err) {
-    streamDeck.logger.error(`listProfiles failed: ${(err as Error).message}`);
+    streamDeck.logger.error(`${payload?.event} failed: ${(err as Error).message}`);
   }
 });
 

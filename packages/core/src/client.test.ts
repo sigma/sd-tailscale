@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { TailscaleClient } from "./client.js";
 import type { CommandResult, CommandRunner } from "./runner.js";
-import { parseProfiles } from "./status.js";
+import { parseExitNodes, parseProfiles } from "./status.js";
 
 /** A runner that records the argv it saw and replays a scripted result. */
 class FakeRunner implements CommandRunner {
@@ -75,6 +75,26 @@ describe("TailscaleClient", () => {
     expect(runner.calls).toEqual([["switch", "work"]]);
   });
 
+  it("lists usable exit nodes from status", async () => {
+    const runner = new FakeRunner({
+      stdout: JSON.stringify({
+        Peer: {
+          nodeA: {
+            HostName: "gateway",
+            TailscaleIPs: ["100.64.0.9", "fd7a::9"],
+            ExitNodeOption: true,
+          },
+        },
+      }),
+    });
+    const client = new TailscaleClient(runner);
+
+    expect(await client.listExitNodes()).toEqual([
+      { label: "gateway", ip: "100.64.0.9", active: false },
+    ]);
+    expect(runner.calls).toEqual([["status", "--json"]]);
+  });
+
   it("throws on a non-zero exit", async () => {
     const runner = new FakeRunner({ code: 1, stderr: "not logged in" });
     await expect(new TailscaleClient(runner).up()).rejects.toThrow(/not logged in/);
@@ -98,5 +118,55 @@ describe("parseProfiles", () => {
 
   it("returns nothing for empty output", () => {
     expect(parseProfiles("")).toEqual([]);
+  });
+});
+
+describe("parseExitNodes", () => {
+  it("keeps only peers that advertise ExitNodeOption, sorted by hostname", () => {
+    const status = {
+      Peer: {
+        keyZ: {
+          HostName: "zeta",
+          TailscaleIPs: ["100.64.0.3"],
+          ExitNodeOption: true,
+        },
+        keyA: {
+          HostName: "alpha",
+          DNSName: "alpha.tailnet.ts.net.",
+          TailscaleIPs: ["100.64.0.1", "fd7a::1"],
+          ExitNodeOption: true,
+          ExitNode: true,
+        },
+        keyPlain: {
+          HostName: "not-an-exit",
+          TailscaleIPs: ["100.64.0.2"],
+        },
+      },
+    };
+
+    expect(parseExitNodes(status)).toEqual([
+      { label: "alpha", ip: "100.64.0.1", active: true },
+      { label: "zeta", ip: "100.64.0.3", active: false },
+    ]);
+  });
+
+  it("falls back to DNS name, then to an empty label, sorting by what's shown", () => {
+    const status = {
+      Peer: {
+        k1: { DNSName: "dns-only.ts.net.", TailscaleIPs: ["100.64.0.4"], ExitNodeOption: true },
+        k2: { TailscaleIPs: ["100.64.0.5"], ExitNodeOption: true },
+      },
+    };
+
+    // The unnamed node sorts by its IP ("1…" < "d…"), so it comes first.
+    expect(parseExitNodes(status)).toEqual([
+      { label: "", ip: "100.64.0.5", active: false },
+      { label: "dns-only.ts.net", ip: "100.64.0.4", active: false },
+    ]);
+  });
+
+  it("returns nothing when there are no peers", () => {
+    expect(parseExitNodes({})).toEqual([]);
+    expect(parseExitNodes(null)).toEqual([]);
   });
 });

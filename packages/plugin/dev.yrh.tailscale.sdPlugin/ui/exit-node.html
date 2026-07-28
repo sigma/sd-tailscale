@@ -6,9 +6,11 @@
     <title>Exit Node</title>
     <!--
       Property Inspector for the Exit Node action. Self-contained vanilla HTML/JS
-      (see connect.html for the rationale). Stores the exit node to route through
-      as a plain per-key setting; the action toggles it on/off against live
-      status.
+      (see connect.html for the rationale). It asks the plugin for the usable
+      exit nodes discovered in live status (getExitNodes → exitNodes) to fill a
+      dropdown, and keeps a free-text field as a fallback for nodes not yet
+      visible. Either way the chosen node is stored as the `exitNode` per-key
+      setting; the action toggles it on/off against live status.
     -->
     <style>
       :root {
@@ -26,6 +28,7 @@
         margin-bottom: 4px;
         color: #969696;
       }
+      select,
       input {
         width: 100%;
         padding: 5px 6px;
@@ -34,6 +37,9 @@
         border: 1px solid #1b1b1b;
         border-radius: 4px;
       }
+      input {
+        margin-top: 10px;
+      }
       p.hint {
         margin: 8px 0 0;
         color: #808080;
@@ -41,16 +47,24 @@
     </style>
   </head>
   <body>
-    <label for="exitNode">Exit node</label>
+    <label for="node">Exit node</label>
+    <select id="node">
+      <option value="">Custom (enter below)</option>
+    </select>
     <input id="exitNode" type="text" placeholder="100.x.y.z or host.tailnet.ts.net" />
-    <p class="hint">The peer IP or MagicDNS name to route traffic through.</p>
+    <p class="hint">
+      Pick a node advertised on your tailnet, or type a peer IP / MagicDNS name
+      that isn't listed yet.
+    </p>
 
     <script>
       let websocket = null;
       let uuid = null;
       let settings = {};
+      const select = document.getElementById("node");
       const input = document.getElementById("exitNode");
 
+      // The Stream Deck app calls this global to hand us the socket.
       function connectElgatoStreamDeckSocket(port, propertyInspectorUUID, _event, _info, actionInfo) {
         uuid = propertyInspectorUUID;
         try {
@@ -63,6 +77,14 @@
         websocket = new WebSocket("ws://127.0.0.1:" + port);
         websocket.onopen = () => {
           send({ event: "registerPropertyInspector", uuid });
+          // Ask the plugin for the usable exit nodes it sees in live status.
+          sendToPlugin({ event: "getExitNodes" });
+        };
+        websocket.onmessage = (msg) => {
+          const data = JSON.parse(msg.data);
+          if (data.event === "sendToPropertyInspector" && data.payload?.event === "exitNodes") {
+            renderExitNodes(data.payload.exitNodes || []);
+          }
         };
       }
 
@@ -70,9 +92,47 @@
         websocket?.send(JSON.stringify(obj));
       }
 
-      input.addEventListener("input", () => {
-        settings = { ...settings, exitNode: input.value };
+      function sendToPlugin(payload) {
+        send({ event: "sendToPlugin", action: "dev.yrh.tailscale.exit-node", context: uuid, payload });
+      }
+
+      function store(value) {
+        settings = { ...settings, exitNode: value };
         send({ event: "setSettings", context: uuid, payload: settings });
+      }
+
+      function renderExitNodes(nodes) {
+        // Keep the "Custom" default, then append one option per discovered node.
+        select.length = 1;
+        for (const n of nodes) {
+          const opt = document.createElement("option");
+          opt.value = n.ip;
+          // Show "name (ip)", or just the IP when the peer has no name.
+          const text = n.label ? `${n.label} (${n.ip})` : n.ip;
+          opt.textContent = n.active ? `${text} — current` : text;
+          select.appendChild(opt);
+        }
+        // Reflect the stored setting: select it if it matches a known node,
+        // otherwise fall back to the custom text field.
+        const current = settings.exitNode || "";
+        const known = [...select.options].some((o) => o.value === current && o.value !== "");
+        select.value = known ? current : "";
+      }
+
+      select.addEventListener("change", () => {
+        if (select.value === "") {
+          // "Custom" — keep whatever is typed, and let the user edit it.
+          input.focus();
+          return;
+        }
+        input.value = select.value;
+        store(select.value);
+      });
+
+      input.addEventListener("input", () => {
+        // Free-text overrides the dropdown; drop back to the custom option.
+        select.value = "";
+        store(input.value);
       });
     </script>
   </body>
