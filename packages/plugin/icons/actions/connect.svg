@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Connect — base state (action list / disconnected-but-idle).
+  Tile-flip system (#7): Gray900 tile, white power glyph. Glyph biased
+  down 8px to clear the reserved top title band. Full-bleed tile so the
+  whole key face carries the state colour.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" width="72" height="72">
+  <rect width="72" height="72" fill="#1F1E1E"/>
+  <g transform="translate(0 8)" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round">
+    <path d="M25 27 a17 17 0 1 0 22 0"/>
+    <line x1="36" y1="18" x2="36" y2="38"/>
+  </g>
+</svg>

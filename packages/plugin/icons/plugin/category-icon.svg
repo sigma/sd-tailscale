@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Category & action-list icon (#7): the SAME three-node mesh mark, but
+  mono-white on a TRANSPARENT background — required by the Elgato spec (#5)
+  for category (28×28) and action-list (20×20) icons. Same glyph as the
+  marketplace mark, one fill. No tile rect: background stays transparent.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" width="72" height="72">
+  <g fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round">
+    <line x1="24" y1="46" x2="36" y2="24"/>
+    <line x1="36" y1="24" x2="48" y2="46"/>
+    <line x1="24" y1="46" x2="48" y2="46"/>
+  </g>
+  <circle cx="36" cy="24" r="7" fill="#FFFFFF"/>
+  <circle cx="24" cy="46" r="7" fill="#FFFFFF"/>
+  <circle cx="48" cy="46" r="7" fill="#FFFFFF"/>
+</svg>

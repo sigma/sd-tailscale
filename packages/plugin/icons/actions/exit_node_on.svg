@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Exit Node — active state (`exit_node_on`).
+  Tile-flip (#7): whole key lights Blue; glyph flips to dark Gray900 for
+  contrast. Node + outbound-arrow glyph, biased down 8px for the title band.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" width="72" height="72">
+  <rect width="72" height="72" fill="#5A82DE"/>
+  <g transform="translate(0 8)" fill="none" stroke="#1F1E1E" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="30" cy="42" r="15"/>
+    <path d="M40 32 L54 18"/>
+    <path d="M44 17 L55 17 L55 28"/>
+  </g>
+</svg>
