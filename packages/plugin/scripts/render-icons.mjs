@@ -12,12 +12,15 @@
 // not rasterize live text — outlining is what we want for reproducibility
 // anyway). Run via `just render-icons`.
 //
-// Sizes are the Stream Deck action-key pair (72 / @2x 144). Other asset classes
-// (mono category 28×28, plugin 256/512, marketplace 288×288) get their own
-// sizes when their sources are authored — extend RENDER_SIZES then.
+// Output sizes are per asset class, not one global pair — an action key, a
+// category icon, and the plugin icon live at different pixel sizes (Elgato spec
+// matrix, research #5). Each size is `[output suffix, pixel width]`; resvg fits
+// to width, so a square source stays square. Sources with no explicit class
+// fall back to the action-key pair (72 / @2x 144), which also covers the
+// `_sample/` pipeline proof.
 
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { Resvg } from "@resvg/resvg-js";
@@ -27,11 +30,33 @@ const pluginRoot = resolve(scriptDir, "..");
 const SRC_ROOT = join(pluginRoot, "icons");
 const OUT_ROOT = join(pluginRoot, "dev.yrh.tailscale.sdPlugin", "imgs");
 
-// [output suffix, pixel width]. resvg fits to width; square sources stay square.
-const RENDER_SIZES = [
+// Action keys (and anything unclassified): 72×72 key image + 144×144 @2x.
+const DEFAULT_SIZES = [
   ["", 72],
   ["@2x", 144],
 ];
+
+// Overrides keyed by source path (relative to icons/, without extension). The
+// category icon and plugin icon are the two non-key classes the manifest
+// references (`CategoryIcon`, `Icon`); their sizes come from the Elgato spec
+// (category 28/56, plugin icon 256/512). Marketplace *listing* art (288×288,
+// 1920×960) is a web-portal upload, not a bundle/manifest asset, and a 2:1
+// banner can't come from a square source — so it's out of this pipeline.
+const SIZES_BY_REL = {
+  "plugin/category-icon": [
+    ["", 28],
+    ["@2x", 56],
+  ],
+  "plugin/marketplace": [
+    ["", 256],
+    ["@2x", 512],
+  ],
+};
+
+/** Output sizes for a source, by its `icons/`-relative path (sans extension). */
+function sizesFor(rel) {
+  return SIZES_BY_REL[rel.split(sep).join("/")] ?? DEFAULT_SIZES;
+}
 
 /** Recursively collect every `.svg` under `dir`, sorted for deterministic order. */
 async function collectSvgs(dir) {
@@ -58,7 +83,7 @@ async function renderOne(svgPath) {
   const svg = await readFile(svgPath);
   const rel = relative(SRC_ROOT, svgPath).replace(/\.svg$/, "");
   const written = [];
-  for (const [suffix, width] of RENDER_SIZES) {
+  for (const [suffix, width] of sizesFor(rel)) {
     const png = new Resvg(svg, {
       fitTo: { mode: "width", value: width },
       // Force a transparent background so mono/transparent assets stay clean.
