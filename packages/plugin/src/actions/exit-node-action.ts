@@ -6,6 +6,8 @@ import streamDeck, {
 import type { TailscaleClient, TailscaleStatus } from "@sd-tailscale/core";
 
 import type { StatusMonitor } from "../monitor.js";
+import { renderButtonImageSafe } from "../render.js";
+import { activeTailnetName } from "../tailnet-name.js";
 
 /** Per-key settings written by the exit-node Property Inspector. */
 interface ExitNodeSettings {
@@ -64,11 +66,20 @@ export class ExitNodeAction extends SingletonAction {
   #refresh(): void {
     const missing = this.#monitor.health === "binary-missing";
     const active = exitNodeActive(this.#monitor.latest);
+    const state = active ? 0 : 1;
+    // Bake the active tailnet name onto whichever base icon the state selects.
+    // Rendered once per repaint (self-heals) rather than per key instance.
+    const image = renderButtonImageSafe(
+      active ? "exit_node_on" : "exit_node_off",
+      activeTailnetName(this.#monitor.latest),
+    );
     for (const action of this.actions) {
       if (!action.isKey()) continue;
-      void action.setState(active ? 0 : 1);
+      void action.setState(state);
       // See ConnectAction#refresh: mark "CLI not found" apart from daemon-down.
       void action.setTitle(missing ? "No\nCLI" : "");
+      // Target the current state so the state-specific base icon lands right.
+      if (image) void action.setImage(image, { state });
     }
   }
 }
