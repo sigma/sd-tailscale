@@ -4,5 +4,7 @@ packages/*/dist/
 packages/plugin/**/bin/
 # Stream Deck plugin runtime logs
 packages/plugin/**/logs/
+# Throwaway render-pipeline sample output (source lives in icons/_sample/)
+packages/plugin/**/imgs/_sample/
 *.streamDeckPlugin
 .DS_Store
