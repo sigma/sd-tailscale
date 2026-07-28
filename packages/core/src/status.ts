@@ -39,6 +39,36 @@ export interface TailscaleStatus {
   [key: string]: unknown;
 }
 
+/** A peer usable as an exit node, distilled from `tailscale status --json`. */
+export interface ExitNode {
+  /** Human label: the peer's `HostName`, falling back to its DNS name; empty when it has neither. */
+  label: string;
+  /** The peer's Tailscale IPv4 to route through (the value passed to `set --exit-node`). */
+  ip: string;
+  /** True when this peer is currently serving as our exit node. */
+  active: boolean;
+}
+
+/**
+ * Distill the usable exit nodes from a status payload: peers advertising
+ * `ExitNodeOption`. Sorted by how they'll be shown (label, or IP when unnamed)
+ * for a stable dropdown. Mirrors what {@link parseProfiles} does for Connect.
+ */
+export function parseExitNodes(status: TailscaleStatus | null): ExitNode[] {
+  const peers = status?.Peer;
+  if (!peers) return [];
+  const nodes: ExitNode[] = [];
+  for (const peer of Object.values(peers)) {
+    if (peer.ExitNodeOption !== true) continue;
+    const ip = peer.TailscaleIPs?.[0] ?? "";
+    // Trim MagicDNS's trailing dot so the label reads as a plain hostname.
+    const dnsName = peer.DNSName?.replace(/\.$/, "");
+    const label = peer.HostName || dnsName || "";
+    nodes.push({ label, ip, active: peer.ExitNode === true });
+  }
+  return nodes.sort((a, b) => (a.label || a.ip).localeCompare(b.label || b.ip));
+}
+
 /** A login profile as listed by `tailscale switch --list`. */
 export interface Profile {
   id: string;

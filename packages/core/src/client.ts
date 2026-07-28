@@ -1,5 +1,11 @@
 import { type CommandRunner, ExecFileRunner, TailscaleError } from "./runner.js";
-import { type Profile, parseProfiles, type TailscaleStatus } from "./status.js";
+import {
+  type ExitNode,
+  type Profile,
+  parseExitNodes,
+  parseProfiles,
+  type TailscaleStatus,
+} from "./status.js";
 
 /**
  * A typed facade over the `tailscale` CLI. Every method turns into one
@@ -58,6 +64,14 @@ export class TailscaleClient {
    */
   async setExitNode(node: string | null): Promise<void> {
     await this.#exec(["set", node ? `--exit-node=${node}` : "--exit-node="]);
+  }
+
+  /**
+   * List the peers currently advertising themselves as usable exit nodes,
+   * derived from `tailscale status --json`.
+   */
+  async listExitNodes(): Promise<ExitNode[]> {
+    return parseExitNodes(await this.status());
   }
 
   /** List login profiles (`tailscale switch --list`). */

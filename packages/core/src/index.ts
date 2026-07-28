@@ -11,8 +11,10 @@ export {
 } from "./runner.js";
 export {
   type BackendState,
+  type ExitNode,
   type PeerStatus,
   type Profile,
+  parseExitNodes,
   parseProfiles,
   type TailscaleStatus,
 } from "./status.js";
